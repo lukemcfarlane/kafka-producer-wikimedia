@@ -1,0 +1,9 @@
+#!/usr/bin/env ruby
+
+require_relative '../lib/kafka_producer_wikimedia'
+
+KafkaProducerWikimedia.config do |config|
+  config.bootstrap_server = ENV.fetch('BOOTSTRAP_SERVER')
+end
+
+KafkaProducerWikimedia::Producer.produce_from_stream
