@@ -1,34 +1,35 @@
 # frozen_string_literal: true
 
-require 'rdkafka'
-
 module KafkaProducerWikimedia
   class Producer
 
     TOPIC = 'wikimedia.recentchange'
+    STREAM_URL = 'https://stream.wikimedia.org/v2/stream/recentchange'
 
     def initialize(config)
       @config = config
+      @kafka_config = {
+        'bootstrap.servers' => config.bootstrap_server,
+      }
     end
 
     def produce_from_stream
-      kafka_config = {
-        'bootstrap.servers' => config.bootstrap_server,
-      }
-      producer = Rdkafka::Config.new(kafka_config).producer
-      delivery_handles = []
-      i = 0
+      begin
+        sse_client = SSE::Client.new(STREAM_URL) do |client|
+          client.on_event do |event|
+            message_handler.call(event.data) if event.type == :message
+          end
 
-      loop do
-        puts "producing message #{i}"
-        delivery_handles << producer.produce(
-          topic: TOPIC,
-          payload: "test #{i}",
-          key: "message_#{i}",
-        )
+          client.on_error do |error|
+            puts "Error received: #{error}"
+          end
+        end
 
-        i += 1
-        sleep 1
+        # Block the main thread to keep the SSE connection open
+        sleep
+      ensure
+        sse_client.close if sse_client
+        puts "SSE connection closed."
       end
     end
 
@@ -38,6 +39,14 @@ module KafkaProducerWikimedia
 
     private
 
-    attr_reader :config
+    attr_reader :config, :kafka_config
+
+    def producer
+      @producer ||= Rdkafka::Config.new(kafka_config).producer
+    end
+
+    def message_handler
+      @message_handler ||= MessageHandler.new(producer, TOPIC)
+    end
   end
 end
