@@ -5,11 +5,15 @@ module KafkaProducerWikimedia
 
     TOPIC = 'wikimedia.recentchange'
     STREAM_URL = 'https://stream.wikimedia.org/v2/stream/recentchange'
+    INT32_MAX = (2**31 - 1).freeze
 
     def initialize(config)
       @config = config
       @kafka_config = {
         'bootstrap.servers' => config.bootstrap_server,
+        'enable.idempotence' => true,
+        'acks' => 'all',
+        'retries' => INT32_MAX,
       }
     end
 
