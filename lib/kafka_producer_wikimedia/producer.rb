@@ -9,11 +9,16 @@ module KafkaProducerWikimedia
 
     def initialize(config)
       @config = config
+      # Reference: https://github.com/confluentinc/librdkafka/blob/master/CONFIGURATION.md
       @kafka_config = {
         'bootstrap.servers' => config.bootstrap_server,
         'enable.idempotence' => true,
         'acks' => 'all',
         'retries' => INT32_MAX,
+        'linger.ms' => 20,
+        'batch.size' => 32 * 1024, # 32
+        'debug' => 'conf',
+        'compression.type' => 'snappy',
       }
     end
 
